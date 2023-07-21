@@ -1,146 +1,83 @@
-import sys
+class DiningExperienceManager:
+
+    def __init__(self):
+        self.menu = {
+            'Meal1': {'price': 5, 'type': 'Regular'},
+            'Meal2': {'price': 5, 'type': 'Regular'},
+            'Meal3': {'price': 10, 'type': 'ChefSpecial'},
+            'Meal4': {'price': 10, 'type': 'ChefSpecial'},
+        }
+        self.order = {}
+        self.total_cost = 0
+        self.discount = 0
+
+    def show_menu(self):
+        menu_str = "Menu:\n"
+        for meal, details in self.menu.items():
+            menu_str += f"{meal} ({details['type']}) - ${details['price']}\n"
+        return menu_str
 
 
-# Menú con opciones de comida y precios
-menu = {
-    "1": {"meal": "Spaghetti", "category": "Italian", "price": 8},
-    "2": {"meal": "Sushi", "category": "Japanese", "price": 10},
-    "3": {"meal": "Tacos", "category": "Mexican", "price": 6},
-    # Agrega más opciones de comida al menú según tus preferencias
-}
+    def take_order(self, meal_name, quantity):
+        if meal_name.lower() == 'done':
+            return
 
-# Opciones de descuento
-discounts = {
-    5: 0.1,   # Descuento del 10% para más de 5 comidas
-    10: 0.2   # Descuento del 20% para más de 10 comidas
-}
+        if meal_name not in self.menu:
+            raise ValueError("Invalid meal selection. Please try again.")
 
-# Opciones de descuento especial
-special_discounts = {
-    50: 10,   # Descuento de $10 para un total de más de $50
-    100: 25   # Descuento de $25 para un total de más de $100
-}
+        if not (quantity.isdigit() and int(quantity) > 0 and int(quantity) <= 100):
+            raise ValueError("Invalid quantity. Please try again.")
 
-# Opciones de categoría especial
-special_category = ["Chef's Specials"]
-
-# Límite máximo de cantidad de comidas por pedido
-max_order_quantity = 100
+        self.order[meal_name] = self.order.get(meal_name, 0) + int(quantity)
 
 
-def display_menu():
-    print("Menu:")
-    for key, value in menu.items():
-        print(f"{key}. {value['meal']} ({value['category']}): ${value['price']}")
+    def calculate_cost(self):
+        for meal, quantity in self.order.items():
+            self.total_cost += self.menu[meal]['price'] * quantity
 
-
-def get_user_input(prompt):
-    try:
-        return input(prompt)
-    except KeyboardInterrupt:
-        print("\nOrder canceled.")
-        sys.exit()
-
-
-def validate_quantity(quantity):
-    try:
-        quantity = int(quantity)
-        if quantity > 0:
-            return quantity
+        if self.total_cost > 100:
+            self.discount = 25
+        elif self.total_cost > 50:
+            self.discount = 10
         else:
-            return None
-    except ValueError:
-        return None
+            self.discount = 0
+
+        meal_count = sum(self.order.values())
+        if meal_count > 10:
+            self.discount += self.total_cost * 0.2
+        elif meal_count > 5:
+            self.discount += self.total_cost * 0.1
 
 
-def calculate_cost(order):
-    total_cost = 0
-    for meal, quantity in order.items():
-        price = menu[meal]['price']
-        total_cost += price * quantity
+    def confirm_order(self, confirmation):
+        order_str = "\nYour order:\n"
+        for meal, quantity in self.order.items():
+            order_str += f"{meal}: {quantity}\n"
 
-    # Aplicar descuento según la cantidad de comidas
-    if len(order) > max(discounts.keys()):
-        total_cost *= (1 - max(discounts.values()))
+        self.calculate_cost()
 
-    # Aplicar descuento especial según el total del pedido
-    for amount, discount in special_discounts.items():
-        if total_cost > amount:
-            total_cost -= discount
+        order_str += (f"\nTotal cost: ${self.total_cost}\n"
+                    f"Discount: ${self.discount}\n"
+                    f"Final cost: ${self.total_cost - self.discount}\n")
 
-    # Aplicar recargo por categoría especial
-    for meal, quantity in order.items():
-        if menu[meal]['category'] in special_category:
-            total_cost += menu[meal]['price'] * quantity * 0.05
-
-    return total_cost
+        if confirmation.lower() == 'y':
+            order_str += "Order confirmed. Enjoy your meal!\n"
+            return order_str, self.total_cost - self.discount
+        elif confirmation.lower() == 'n':
+            order_str += "Order cancelled.\n"
+            return order_str, -1
+        else:
+            raise ValueError("Invalid option. Please try again.")
 
 
-def validate_order(order):
-    # Verificar si las comidas seleccionadas están en el menú
-    for meal in order.keys():
-        if meal not in menu:
-            print(f"Error: '{meal}' is not a valid meal selection.")
-            return False
-
-    # Verificar si la cantidad de comidas es válida
-    for quantity in order.values():
-        if quantity is None:
-            print("Error: Invalid quantity entered.")
-            return False
-
-    # Verificar si la cantidad de comidas supera el límite máximo
-    total_quantity = sum(order.values())
-    if total_quantity > max_order_quantity:
-        print(f"Error: Maximum order quantity exceeded. Maximum: {max_order_quantity}")
-        return False
-
-    return True
+    def manage(self, meal_name, quantity, confirmation):
+        menu = self.show_menu()
+        self.take_order(meal_name, quantity)
+        order_str, result = self.confirm_order(confirmation)
+        return menu + order_str, result
 
 
-def confirm_order(order, total_cost):
-    print("\nSelected Meals:")
-    for meal, quantity in order.items():
-        print(f"{menu[meal]['meal']} ({menu[meal]['category']}): {quantity} x ${menu[meal]['price']}")
-
-    print(f"\nTotal Cost: ${total_cost}")
-
-    user_input = get_user_input("\nConfirm order? (Y/N): ").lower()
-
-    if user_input == 'y':
-        return total_cost
-    else:
-        print("Order canceled.")
-        return -1
-
-
-def dining_experience_manager():
-    display_menu()
-
-    order = {}
-    while True:
-        meal = get_user_input("\nEnter meal number to order (or 'done' to finish): ")
-
-        if meal == 'done':
-            break
-
-        quantity = get_user_input("Enter quantity for the meal: ")
-        quantity = validate_quantity(quantity)
-
-        if quantity is None:
-            print("Error: Invalid quantity entered. Please enter a positive integer.")
-            continue
-
-        order[meal] = quantity
-
-    if not validate_order(order):
-        return -1
-
-    total_cost = calculate_cost(order)
-    return confirm_order(order, total_cost)
-
-
-if __name__ == '__main__':
-    result = dining_experience_manager()
-    if result != -1:
-        print(f"\nThank you for your order! Total cost: ${result}")
+if __name__ == "__main__":
+    manager = DiningExperienceManager()
+    result = manager.manage()
+    print(f"Result: {result}")
