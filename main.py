@@ -32,6 +32,7 @@ class DiningExperienceManager:
 
 
     def calculate_cost(self):
+        self.total_cost = 0
         for meal, quantity in self.order.items():
             self.total_cost += self.menu[meal]['price'] * quantity
 
@@ -77,9 +78,10 @@ class DiningExperienceManager:
         return menu + order_str, result
 
 
-if __name__ == "__main__":
+def main(): # pragma: no cover
     manager = DiningExperienceManager()
     result = manager.manage()
     print(f"Result: {result}")
 
-
+if __name__ == "__main__":  # pragma: no cover
+    main()
